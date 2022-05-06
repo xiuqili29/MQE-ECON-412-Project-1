@@ -1,0 +1,155 @@
+---
+title: "Project 1_re"
+author: "Xinwei Hu"
+date: "5/20/2021"
+output: html_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#Read the dataset
+library(e1071)
+churner<- read.csv("/Users/matthu/Desktop/BankChurners.csv")
+head(churner)
+```
+
+
+```{r}
+#Detecting NA
+nrow(churner)
+churner=na.omit(churner)
+nrow(churner)
+
+churner$Attrition_Flag <- as.factor(churner$Attrition_Flag)
+
+churner$Gender <- as.factor(churner$Gender)
+
+churner$Education_Level <- as.factor(churner$Education_Level)
+
+churner$Marital_Status <- as.factor(churner$Marital_Status)
+
+churner$Income_Category <- as.factor(churner$Income_Category)
+
+churner$Card_Category <- as.factor(churner$Card_Category)
+```
+```
+
+```{r}
+summary(churner$Customer_Age)
+summary(churner$Months_on_book)
+summary(churner$Dependent_count)
+```
+
+
+In this part, we have classified three numerical variable, age, months and dependent.
+
+```{r}
+# classify numerical data
+# age from 25 to 75, we classify to three types
+age_class <- function(age){
+  if(age>=25 && age<=35){
+   age = "25-35"
+  } 
+  if(age>=36 && age<=50){
+   age = "36-50"
+  }
+  if(age>=51 && age<=75){
+  age = "51-75"
+  }
+  age
+}
+churner$age_class <- mapply(age_class,churner$Customer_Age)
+
+months_class <- function(Months_on_book){
+  if(Months_on_book>=12 && Months_on_book<=35){
+   Months_on_book = "12-35"
+  } 
+  if(Months_on_book>=36 && Months_on_book<=47){
+   Months_on_book = "36-47"
+  }
+  if(Months_on_book>=48 && Months_on_book<=60){
+  Months_on_book = "48-60"
+  }
+  Months_on_book
+}
+churner$months_class <- mapply(months_class,churner$Months_on_book)
+
+dependent_class <- function(dependent){
+  if(dependent==0){
+   dependent = "0"
+  } 
+  if(dependent==1){
+   dependent = "1"
+  }
+  if(dependent==2){
+  dependent = "2"
+  }
+  if(dependent==3){
+  dependent = "3"
+  }
+  if(dependent==4){
+  dependent = "4"
+  }
+  if(dependent==5){
+  dependent = "5"
+  }
+  dependent
+}
+churner$dependent_class <- mapply(dependent_class,churner$Dependent_count)
+
+
+head(churner)
+```
+
+
+```{r}
+set.seed(128)
+# Create training and validation sets.
+selected.var <- c(2, 4, 6, 7, 8, 9, 11, 12, 13)
+train.index <- sample(c(1:dim(churner)[1]), dim(churner)[1]*0.6)  
+train.df <- churner[train.index, selected.var]
+valid.df <- churner[-train.index, selected.var]
+head(train.df)
+head(valid.df)
+```
+
+In the following part, we have run the naive bayes of conditional probabilities
+
+```{r}
+# Run naive bayes: Conditional Probabilities which can be computed directly from the data
+churner.nb <- naiveBayes(Attrition_Flag ~ ., data = train.df)
+churner.nb
+```
+
+
+```{r}
+# Predict Probabilities
+pred.prob <- predict(churner.nb, newdata = valid.df, type = "raw")
+## Predict class membership
+pred.class <- predict(churner.nb, newdata = valid.df)
+df <- data.frame(actual = valid.df$Attrition_Flag, predicted = pred.class, pred.prob)
+head(df)
+```
+
+```{r}
+# Evaluate Performance
+library(caret)
+# Training
+pred.class <- predict(churner.nb, newdata = train.df)
+confusionMatrix(pred.class, train.df$Attrition_Flag)
+```
+
+In the train set, we have found the accurary is 0.7018.
+
+```{r}
+# Validation
+pred.class <- predict(churner.nb, newdata = valid.df)
+confusionMatrix(pred.class, valid.df$Attrition_Flag)
+```
+
+In the validation set, we have found the accuracy is 0.6859.
+
